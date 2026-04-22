@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Signup – Placement Portal</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter';}
+
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+}
+
+.container{
+    width:330px;
+    padding:30px 25px;
+    border-radius:15px;
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(15px);
+    color:white;
+    text-align:center;
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+}
+
+h2{margin-bottom:6px;font-size:28px;font-weight:700;color:#ffffff;letter-spacing:0.5px;}
+p{font-size:14px;color:#e0e0e0;margin-bottom:20px;font-weight:400;line-height:1.5;}
+
+.toggle{
+    display:flex;
+    background:#ffffff15;
+    border-radius:10px;
+    margin-bottom:18px;
+}
+
+.toggle button{
+    flex:1;
+    padding:9px 10px;
+    border:none;
+    background:none;
+    color:#aaa;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:500;
+    transition:0.3s;
+}
+
+.toggle .active{
+    background:#6c63ff;
+    color:white;
+    border-radius:10px;
+}
+
+input, select{
+    width:100%;
+    padding:9px 11px;
+    margin:6px 0;
+    border:none;
+    border-radius:8px;
+    background:#ffffff12;
+    color:white;
+    font-size:12px;
+    outline:none;
+    transition:0.3s;
+}
+
+input:focus, select:focus{
+    background:#ffffff20;
+    box-shadow:0 0 10px rgba(108, 99, 255, 0.2);
+}
+
+input::placeholder{
+    color:#aaa;
+}
+
+select option{
+    background:#1e1b3c;
+}
+
+button.main{
+    width:100%;
+    padding:9px;
+    margin-top:10px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(135deg,#6c63ff,#9333ea);
+    color:white;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    transition:0.3s;
+}
+
+button.main:hover{
+    transform:scale(1.02);
+    box-shadow:0 5px 15px rgba(108, 99, 255, 0.4);
+}
+
+a{
+    display:block;
+    margin-top:12px;
+    color:#c4b5fd;
+    text-decoration:none;
+    font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Placement Portal</h2>
+<p>Create your account and start your placement journey</p>
+
+<!-- ROLE -->
+<div class="toggle">
+    <button id="studentBtn" class="active" onclick="setRole('student')">Student</button>
+    <button id="adminBtn" onclick="setRole('admin')">Admin</button>
+</div>
+
+<!-- FORM -->
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+
+<!-- DEGREE -->
+<select id="degree">
+    <option value="">Select Degree</option>
+    <option value="BTech">BTech</option>
+    <option value="BE">BE</option>
+    <option value="BSc">BSc</option>
+    <option value="BCA">BCA</option>
+    <option value="MTech">MTech</option>
+    <option value="MSc">MSc</option>
+    <option value="MCA">MCA</option>
+    <option value="Diploma">Diploma</option>
+    <option value="Other">Other</option>
+</select>
+
+<!-- CGPA -->
+<input id="cgpa" type="number" step="0.01" placeholder="CGPA">
+
+<!-- SKILLS -->
+<input id="skills" placeholder="Skills (e.g. Python, Java)">
+
+<button class="main" onclick="signup()">Create Account</button>
+
+<a href="{% url 'login' %}">Already have an account? Sign In</a>
+</div>
+
+<script>
+let role="student";
+
+function setRole(r){
+    role=r;
+    document.getElementById("studentBtn").classList.toggle("active", r==="student");
+    document.getElementById("adminBtn").classList.toggle("active", r==="admin");
+}
+
+async function signup(){
+    const name=document.getElementById("name").value.trim();
+    const email=document.getElementById("email").value.trim();
+    const password=document.getElementById("password").value.trim();
+    const degree=document.getElementById("degree").value;
+    const cgpa=document.getElementById("cgpa").value;
+    const skills=document.getElementById("skills").value.trim();
+
+    if(!name || !email || !password){
+        alert("Please fill required fields");
+        return;
+    }
+
+    try{
+        const res=await fetch("/api/signup",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                name,email,password,role,
+                degree,cgpa,skills
+            })
+        });
+
+        const data=await res.json();
+
+        if(res.ok){
+            alert("Signup successful");
+            window.location.href="{% url 'login' %}";
+        }else{
+            alert(data.error || "Signup failed");
+        }
+
+    }catch{
+        alert("Server error");
+    }
+}
+</script>
+
+</body>
+</html>

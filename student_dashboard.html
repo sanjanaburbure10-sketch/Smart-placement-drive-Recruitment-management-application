@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter';}
+
+body{
+    display:flex;
+    height:100vh;
+    background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+    color:white;
+}
+
+.sidebar{
+    width:230px;
+    background:#1e1b3c;
+    padding:20px;
+}
+
+.sidebar h2{margin-bottom:20px;}
+
+.sidebar a{
+    display:block;
+    padding:10px;
+    color:#ccc;
+    text-decoration:none;
+    margin-bottom:10px;
+    border-radius:8px;
+}
+
+.sidebar a:hover{
+    background:#6c63ff;
+    color:white;
+}
+
+.main{
+    flex:1;
+    padding:20px;
+    overflow-y:auto;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:20px;
+}
+
+.search{
+    padding:10px;
+    width:250px;
+    border-radius:10px;
+    border:none;
+}
+
+.jobs{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:#1e1b3c;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+}
+
+.job-card{
+    background:#2a2655;
+    padding:15px;
+    border-radius:12px;
+    transition:0.3s;
+}
+
+.job-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+}
+
+button{
+    margin-top:8px;
+    padding:8px;
+    width:100%;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(135deg,#6c63ff,#9333ea);
+    color:white;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <h2>Student</h2>
+    <a href="#" onclick="showSection('home')">🏠 Home</a>
+    <a href="#" onclick="showSection('jobs')">💼 Jobs</a>
+    <a href="#" onclick="showSection('applications')">📄 Applications</a>
+    <a href="#" onclick="logout()">🚪 Logout</a>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2 id="welcome">Welcome</h2>
+
+        <input class="search" placeholder="Search jobs..." onkeyup="searchJobs(this.value)">
+
+        <div style="display:flex;gap:10px;align-items:center;">
+            <button onclick="showSection('saved')">💾 Saved</button>
+            <button onclick="showSection('notifications')">🔔</button>
+        </div>
+    </div>
+
+    <!-- HOME -->
+    <div id="homeSection">
+        <div class="card">
+            <h3>Your Profile</h3>
+            <p><b>Name:</b> <span id="name"></span></p>
+            <p><b>Email:</b> <span id="email"></span></p>
+        </div>
+    </div>
+
+    <!-- FILTER -->
+    <select onchange="filterJobs(this.value)">
+        <option value="">All Companies</option>
+        <option value="Google">Google</option>
+        <option value="Amazon">Amazon</option>
+        <option value="TCS">TCS</option>
+    </select>
+
+    <!-- JOBS -->
+    <div id="jobsSection" style="display:none;">
+        <h3>Available Jobs</h3>
+        <div class="jobs" id="jobList"></div>
+    </div>
+
+    <!-- APPLICATIONS -->
+    <div id="appSection" style="display:none;">
+        <h3>My Applications</h3>
+        <div id="applications"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="profileSection" style="display:none;">
+        <div class="card">
+            <h3>My Profile</h3>
+            <input id="bio" placeholder="Your bio">
+            <input type="file" id="profileUpload">
+            <input type="file" id="resumeUpload">
+            <button onclick="updateProfile()">Update Profile</button>
+        </div>
+    </div>
+
+    <!-- SAVED JOBS -->
+    <div id="savedSection" style="display:none;">
+        <h3>Saved Jobs</h3>
+        <div id="savedJobs"></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="notificationSection" style="display:none;">
+        <h3>Notifications</h3>
+        <div id="notifications"></div>
+    </div>
+
+</div>
+
+<script>
+
+// USER DATA
+const userId = localStorage.getItem("user_id");
+const name = localStorage.getItem("user_name");
+const email = localStorage.getItem("user_email");
+
+document.getElementById("name").textContent = name;
+document.getElementById("email").textContent = email;
+document.getElementById("welcome").textContent = "Welcome, " + name;
+
+
+// NAVIGATION
+function showSection(section){
+    document.getElementById("homeSection").style.display="none";
+    document.getElementById("jobsSection").style.display="none";
+    document.getElementById("appSection").style.display="none";
+    document.getElementById("profileSection").style.display="none";
+    document.getElementById("savedSection").style.display="none";
+    document.getElementById("notificationSection").style.display="none";
+
+    if(section==="home") document.getElementById("homeSection").style.display="block";
+
+    if(section==="jobs"){
+        document.getElementById("jobsSection").style.display="block";
+        loadJobs();
+    }
+
+    if(section==="applications"){
+        document.getElementById("appSection").style.display="block";
+        loadApplications();
+    }
+
+    if(section==="saved"){
+        document.getElementById("savedSection").style.display="block";
+        loadSavedJobs();
+    }
+
+    if(section==="notifications"){
+        document.getElementById("notificationSection").style.display="block";
+    }
+
+    if(section==="profile"){
+        document.getElementById("profileSection").style.display="block";
+    }
+}
+
+
+// LOAD JOBS
+let allJobs = [];
+
+async function loadJobs(){
+    const res = await fetch("/api/jobs");
+    const jobs = await res.json();
+    allJobs = jobs;
+    renderJobs(jobs);
+}
+
+
+// RENDER JOBS
+function renderJobs(jobs){
+    let html="";
+
+    jobs.forEach(j=>{
+        html += `
+        <div class="job-card">
+            <h3>${j.title}</h3>
+            <p>${j.company}</p>
+            <p>${j.location}</p>
+
+            <input type="file" id="resume_${j.id}">
+            
+            <button onclick="apply(${j.id})">Apply</button>
+            <button onclick="saveJob(${j.id})">💾 Save</button>
+        </div>`;
+    });
+
+    document.getElementById("jobList").innerHTML = html;
+}
+
+
+// SEARCH
+function searchJobs(q){
+    const filtered = allJobs.filter(j =>
+        j.title.toLowerCase().includes(q.toLowerCase()) ||
+        j.company.toLowerCase().includes(q.toLowerCase())
+    );
+    renderJobs(filtered);
+}
+
+
+// FILTER
+function filterJobs(company){
+    if(company==="") renderJobs(allJobs);
+    else renderJobs(allJobs.filter(j => j.company === company));
+}
+
+
+// APPLY
+async function apply(jobId){
+    const file = document.getElementById(`resume_${jobId}`).files[0];
+
+    const formData = new FormData();
+    formData.append("student_id", userId);
+    formData.append("job_id", jobId);
+    formData.append("resume", file);
+
+    await fetch("/api/apply", {
+        method:"POST",
+        body:formData
+    });
+
+    alert("Applied!");
+}
+
+
+// SAVE JOB
+async function saveJob(jobId){
+    await fetch("/api/save-job", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+            student_id:userId,
+            job_id:jobId
+        })
+    });
+
+    alert("Saved!");
+}
+
+
+// LOAD SAVED JOBS
+async function loadSavedJobs(){
+    const res = await fetch(`/api/saved/${userId}`);
+    const jobs = await res.json();
+
+    let html="";
+
+    jobs.forEach(j=>{
+        html += `
+        <div class="card">
+            <h4>${j.title}</h4>
+            <p>${j.company}</p>
+            <p>${j.location}</p>
+        </div>`;
+    });
+
+    document.getElementById("savedJobs").innerHTML = html;
+}
+
+
+// LOAD APPLICATIONS
+async function loadApplications(){
+    const res = await fetch(`/api/my-apps/${userId}`);
+    const apps = await res.json();
+
+    let html="";
+    apps.forEach(a=>{
+        html += `
+        <div class="card">
+            <h4>${a.job__title}</h4>
+            <p>Status: ${a.status}</p>
+        </div>`;
+    });
+
+    document.getElementById("applications").innerHTML = html;
+}
+
+
+// LOGOUT
+function logout(){
+    localStorage.clear();
+    window.location.href = "/";
+}
+
+
+// INIT
+showSection("home");
+
+</script>
+
+</body>
+</html>

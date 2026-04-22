@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter';}
+
+body{
+    display:flex;
+    height:100vh;
+    background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+    color:white;
+}
+
+.sidebar{
+    width:220px;
+    background:#1e1b3c;
+    padding:20px;
+}
+
+.sidebar a{
+    display:block;
+    padding:10px;
+    color:#ccc;
+    text-decoration:none;
+    margin-bottom:10px;
+    border-radius:8px;
+}
+
+.sidebar a:hover{
+    background:#6c63ff;
+    color:white;
+}
+
+.main{
+    flex:1;
+    padding:20px;
+    overflow-y:auto;
+}
+
+.card{
+    background:#1e1b3c;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+}
+
+input, textarea{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border:none;
+    border-radius:10px;
+    background:#ffffff10;
+    color:white;
+}
+
+button{
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(135deg,#6c63ff,#9333ea);
+    color:white;
+    cursor:pointer;
+}
+
+.job{
+    background:#2a2655;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:10px;
+}
+
+.delete-btn{
+    background:red;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="#" onclick="showSection('dashboard')">📊 Dashboard</a>
+    <a href="#" onclick="showSection('jobs')">💼 Jobs</a>
+    <a href="#" onclick="showSection('applications')">📄 Applications</a>
+    <a href="#" onclick="logout()">🚪 Logout</a>
+</div>
+
+<div class="main">
+
+<h2>Welcome Admin</h2>
+
+<!-- DASHBOARD -->
+<div id="dashboardSection" class="card">
+    <h3>Dashboard Overview</h3>
+    <p>Total Jobs: <span id="totalJobs">0</span></p>
+    <p>Total Applications: <span id="totalApps">0</span></p>
+</div>
+
+<!-- JOBS -->
+<div id="jobsSection" style="display:none;">
+
+    <div class="card">
+        <h3>Post New Job</h3>
+
+        <input id="title" placeholder="Job Title">
+        <input id="company" placeholder="Company">
+        <input id="location" placeholder="Location">
+        <input id="cgpa" placeholder="Minimum CGPA">
+        <textarea id="desc" placeholder="Job Description"></textarea>
+
+        <button onclick="addJob()">Post Job</button>
+    </div>
+
+    <div class="card">
+        <h3>All Jobs</h3>
+        <div id="jobList"></div>
+    </div>
+
+</div>
+
+<!-- APPLICATIONS -->
+<div id="appSection" style="display:none;">
+    <div class="card">
+        <h3>All Applications</h3>
+        <div id="applications"></div>
+    </div>
+</div>
+
+</div>
+
+<script>
+
+// 🔐 ADMIN ACCESS CONTROL
+const allowedAdmins = [
+    "anjaliprakash8867@gmail.com",
+    "rahulunki00@gmail.com"
+];
+
+const userEmail = localStorage.getItem("user_email");
+const userRole = localStorage.getItem("user_role");
+
+if(userRole !== "admin" || !allowedAdmins.includes(userEmail)){
+    alert("Access Denied!");
+    window.location.href = "/";
+}
+
+// NAVIGATION
+function showSection(section){
+    document.getElementById("dashboardSection").style.display="none";
+    document.getElementById("jobsSection").style.display="none";
+    document.getElementById("appSection").style.display="none";
+
+    if(section==="dashboard"){
+        document.getElementById("dashboardSection").style.display="block";
+        loadDashboard();
+    }
+
+    if(section==="jobs"){
+        document.getElementById("jobsSection").style.display="block";
+        loadJobs();
+    }
+
+    if(section==="applications"){
+        document.getElementById("appSection").style.display="block";
+        loadApplications();
+    }
+}
+
+// ADD JOB (FIXED)
+async function addJob(){
+
+    const data = {
+        title: document.getElementById("title").value,
+        company: document.getElementById("company").value,
+        location: document.getElementById("location").value,
+        min_cgpa: document.getElementById("cgpa").value,
+        description: document.getElementById("desc").value
+    };
+
+    console.log("Sending:", data); // DEBUG
+
+    try{
+        const res = await fetch("/api/add-job",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        console.log("Response:", result);
+
+        if(res.ok){
+            alert("Job Added Successfully");
+            loadJobs();
+        }else{
+            alert("Error: " + result.error);
+        }
+
+    }catch(err){
+        console.error(err);
+        alert("Server Error");
+    }
+}
+
+// LOAD JOBS
+async function loadJobs(){
+    const res = await fetch("/api/jobs");
+    const jobs = await res.json();
+
+    let html="";
+
+    jobs.forEach(j=>{
+        html += `
+        <div class="job">
+            <h4>${j.title}</h4>
+            <p>${j.company} - ${j.location}</p>
+            <p>Min CGPA: ${j.min_cgpa}</p>
+            <button class="delete-btn" onclick="deleteJob(${j.id})">Delete</button>
+        </div>`;
+    });
+
+    document.getElementById("jobList").innerHTML = html;
+}
+
+// DELETE JOB
+async function deleteJob(id){
+    await fetch("/api/delete-job",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id})
+    });
+
+    alert("Deleted");
+    loadJobs();
+}
+
+// APPLICATIONS
+async function loadApplications(){
+    const res = await fetch("/api/all-applications");
+    const apps = await res.json();
+
+    let html = "";
+
+    apps.forEach(a=>{
+        html += `
+        <div class="card">
+            <h4>${a.job_title}</h4>
+            <p>${a.student_name} (${a.student_email})</p>
+            <p>Status: ${a.status}</p>
+
+            <button onclick="updateStatus(${a.id}, 'Selected')">Approve</button>
+            <button onclick="updateStatus(${a.id}, 'Rejected')">Reject</button>
+        </div>
+        `;
+    });
+
+    document.getElementById("applications").innerHTML = html;
+}
+
+
+// DASHBOARD
+async function loadDashboard(){
+    const jobs = await fetch("/api/jobs").then(r=>r.json());
+    const apps = await fetch("/api/all-applications").then(r=>r.json());
+
+    document.getElementById("totalJobs").textContent = jobs.length;
+    document.getElementById("totalApps").textContent = apps.length;
+}
+
+// LOGOUT
+function logout(){
+    localStorage.clear();
+    window.location.href="/";
+}
+
+// INIT
+showSection("dashboard");
+
+</script>
+
+</body>
+</html>
